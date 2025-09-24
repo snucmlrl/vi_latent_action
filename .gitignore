@@ -152,3 +152,7 @@ dmypy.json
 # Caches and Datasets
 cache/
 data/
+
+pyrightconfig.json
+
+lavila/*

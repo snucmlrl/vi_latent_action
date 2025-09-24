@@ -379,6 +379,50 @@ class CollatorForLatentAction:
 
 
 @dataclass
+class CollatorForViewpointInvariantLatentAction:
+    pixel_values_dtype: torch.dtype = torch.float32
+
+    def __call__(self, instances: Sequence[Dict[str, Dict[str, torch.Tensor]]]) -> Dict[str, torch.Tensor]:
+        
+        if "dataset_name" in instances[0]:
+            dataset_names = [instance["dataset_name"] for instance in instances]
+        else:
+            dataset_names = None
+
+        views = list(instances[0].keys())
+        output = dict()
+
+        for view in views:
+            initial_pixel_values = [instance[view]["initial_pixel_values"] for instance in instances]
+            initial_pixel_values = torch.stack(initial_pixel_values)
+        
+            target_pixel_values = [instance[view]["target_pixel_values"] for instance in instances]
+            target_pixel_values = torch.stack(target_pixel_values)
+            pixel_values = torch.stack([initial_pixel_values, target_pixel_values], dim=1)
+
+            coeff = [torch.as_tensor(instance[view]["coeff"]) for instance in instances]
+            coeff = torch.stack(coeff)
+
+            action = [torch.from_numpy(instance[view]["action"]) for instance in instances]
+            action = torch.stack(action)
+
+            # removing all punctuation in task instruction
+            task_instruction = [re.sub('[{}]'.format(string.punctuation),"",instance[view]["task_instruction"]) for instance in instances]
+
+            output_per_view = dict(
+                videos=pixel_values,
+                task_instruction=task_instruction,
+                action=action,
+                coeff = coeff
+            )
+            if dataset_names is not None:
+                output_per_view["dataset_names"] = dataset_names
+
+            output[view] = output_per_view
+
+        return output
+
+@dataclass
 class CollatorForMultiViewVideo:
     pixel_values_dtype: torch.dtype = torch.float32
 

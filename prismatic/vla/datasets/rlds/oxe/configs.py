@@ -14,11 +14,11 @@ Configuration adopts the following structure:
         secondary: secondary external depth
         wrist: wrist depth
 
-    # Always 8-dim =>> changes based on `StateEncoding`
+    # Always 8-dim = changes based on `StateEncoding`
     state_obs_keys:
-        StateEncoding.POS_EULER:    EEF XYZ (3) + Roll-Pitch-Yaw (3) + <PAD> (1) + Gripper Open/Close (1)
+        StateEncoding.POS_EULER:    EEF XYZ (3) + Roll-Pitch-Yaw (3) + PAD (1) + Gripper Open/Close (1)
         StateEncoding.POS_QUAT:     EEF XYZ (3) + Quaternion (4) + Gripper Open/Close (1)
-        StateEncoding.JOINT:        Joint Angles (7, <PAD> if fewer) + Gripper Open/Close (1)
+        StateEncoding.JOINT:        Joint Angles (7, PAD if fewer) + Gripper Open/Close (1)
 
     state_encoding: Type of `StateEncoding`
     action_encoding: Type of action encoding (e.g., EEF Position vs. Joint Position)
@@ -33,9 +33,9 @@ from prismatic.vla.datasets.rlds.oxe.utils.droid_utils import zero_action_filter
 class StateEncoding(IntEnum):
     # fmt: off
     NONE = -1               # No Proprioceptive State
-    POS_EULER = 1           # EEF XYZ (3) + Roll-Pitch-Yaw (3) + <PAD> (1) + Gripper Open/Close (1)
+    POS_EULER = 1           # EEF XYZ (3) + Roll-Pitch-Yaw (3) + PAD (1) + Gripper Open/Close (1)
     POS_QUAT = 2            # EEF XYZ (3) + Quaternion (4) + Gripper Open/Close (1)
-    JOINT = 3               # Joint Angles (7, <PAD> if fewer) + Gripper Open/Close (1)
+    JOINT = 3               # Joint Angles (7, PAD if fewer) + Gripper Open/Close (1)
     JOINT_BIMANUAL = 4      # Joint Angles (2 x [ Joint Angles (6) + Gripper Open/Close (1) ])
     # fmt: on
 
@@ -47,11 +47,47 @@ class ActionEncoding(IntEnum):
     JOINT_POS = 2           # Joint Delta Position (7) + Gripper Open/Close (1)
     JOINT_POS_BIMANUAL = 3  # Joint Delta Position (2 x [ Joint Delta Position (6) + Gripper Open/Close (1) ])
     EEF_R6 = 4              # EEF Delta XYZ (3) + R6 (6) + Gripper Open/Close (1)
+    NONE = -1
     # fmt: on
 
 
 # === Individual Dataset Configs ===
 OXE_DATASET_CONFIGS = {
+    "egoexo4d_split_1":{ 
+        "image_obs_keys": {"primary": "image", "secondary": None, "wrist": "wrist_image"},
+        "depth_obs_keys": {"primary": None, "secondary": None, "wrist": None},
+        "state_obs_keys": ["EEF_state", None, "gripper_state"],
+        "state_encoding": StateEncoding.POS_EULER,
+        "action_encoding": ActionEncoding.EEF_POS,
+    },
+    "egoexo4d_split_2":{ 
+        "image_obs_keys": {"primary": "image", "secondary": None, "wrist": "wrist_image"},
+        "depth_obs_keys": {"primary": None, "secondary": None, "wrist": None},
+        "state_obs_keys": ["EEF_state", None, "gripper_state"],
+        "state_encoding": StateEncoding.POS_EULER,
+        "action_encoding": ActionEncoding.EEF_POS,
+    },
+    "egoexo4d_split_3":{ 
+        "image_obs_keys": {"primary": "image", "secondary": None, "wrist": "wrist_image"},
+        "depth_obs_keys": {"primary": None, "secondary": None, "wrist": None},
+        "state_obs_keys": ["EEF_state", None, "gripper_state"],
+        "state_encoding": StateEncoding.POS_EULER,
+        "action_encoding": ActionEncoding.EEF_POS,
+    },
+    "egoexo4d_split_4":{ 
+        "image_obs_keys": {"primary": "image", "secondary": None, "wrist": "wrist_image"},
+        "depth_obs_keys": {"primary": None, "secondary": None, "wrist": None},
+        "state_obs_keys": ["EEF_state", None, "gripper_state"],
+        "state_encoding": StateEncoding.POS_EULER,
+        "action_encoding": ActionEncoding.EEF_POS,
+    },
+    "pseudo_pair_dataset":{
+        "image_obs_keys":{"primary": "image_exo", "secondary": None, "wrist": "image_ego"},
+        "depth_obs_keys": {"primary": None, "secondary": None, "wrist": None},
+        "state_obs_keys": [None, None, None, None, None, None, None, None],
+        "state_encoding": StateEncoding.POS_EULER,
+        "action_encoding": ActionEncoding.EEF_POS
+    },
     "fractal20220817_data": {
         "image_obs_keys": {"primary": "image", "secondary": None, "wrist": None},
         "depth_obs_keys": {"primary": None, "secondary": None, "wrist": None},
@@ -640,21 +676,21 @@ OXE_DATASET_CONFIGS = {
         "state_encoding": StateEncoding.POS_EULER,
         "action_encoding": ActionEncoding.EEF_POS,
     },
-    "tdroid_move_object_onto_plate": {  # "move <object> onto plate" task, 150 demos @ 5 Hz control
+    "tdroid_move_object_onto_plate": {  # "move object onto plate" task, 150 demos @ 5 Hz control
         "image_obs_keys": {"primary": "static_image", "secondary": None, "wrist": None},
         "depth_obs_keys": {"primary": "static_depth_image", "secondary": None, "wrist": None},
         "state_obs_keys": ["EEF_state", None, "gripper_state"],
         "state_encoding": StateEncoding.POS_EULER,
         "action_encoding": ActionEncoding.EEF_POS,
     },
-    "tdroid_knock_object_over": {  # "knock <object> over" task, 70 demos @ 5 Hz control
+    "tdroid_knock_object_over": {  # "knock object over" task, 70 demos @ 5 Hz control
         "image_obs_keys": {"primary": "static_image", "secondary": None, "wrist": None},
         "depth_obs_keys": {"primary": "static_depth_image", "secondary": None, "wrist": None},
         "state_obs_keys": ["EEF_state", None, "gripper_state"],
         "state_encoding": StateEncoding.POS_EULER,
         "action_encoding": ActionEncoding.EEF_POS,
     },
-    "tdroid_cover_object_with_towel": {  # "cover <object> with towel" task, 45 demos @ 5 Hz control
+    "tdroid_cover_object_with_towel": {  # "cover object with towel" task, 45 demos @ 5 Hz control
         "image_obs_keys": {"primary": "static_image", "secondary": None, "wrist": None},
         "depth_obs_keys": {"primary": "static_depth_image", "secondary": None, "wrist": None},
         "state_obs_keys": ["EEF_state", None, "gripper_state"],

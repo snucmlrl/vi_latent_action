@@ -302,6 +302,54 @@ class RLDSBatchTransformVideo:
                     task_instruction=lang, action=action, dataset_name=dataset_name)
 
 
+@dataclass
+class RLDSBatchTransformMultiViewVideo:
+    image_transform: ImageTransform
+
+    def __call__(self, rlds_batch: Dict[str, Any]) -> Dict[str, Any]:
+        """Converts a RLDS batch to the format expected by the OpenVLA collator/models."""
+        """
+        out = {
+            "primary":{
+                    "initial_pixel_values": torch.Tensor,
+                    "target_pixel_values": torch.Tensor,
+                    ...
+                },
+            "secondary":{
+                    "initial_pixel_values": torch.Tensor,
+                    "target_pixel_values": torch.Tensor,
+                    ...
+                },
+            "wrist":{
+                    "initial_pixel_values": torch.Tensor,
+                    "target_pixel_values": torch.Tensor,
+                    ...
+                }
+            }
+        
+        """
+        dataset_name, action = rlds_batch["dataset_name"], np.array(rlds_batch["action"])
+        lang = rlds_batch["task"]["language_instruction"].decode().lower()
+        coeff = rlds_batch["coeff"]
+
+        out = dict()
+
+        for k in rlds_batch['observation'].keys():
+            if k.startswith("image_"): # image_primary, image_secondary, image_wrist
+                img = Image.fromarray(rlds_batch["observation"][k][0])#.copy()
+                initial_pixel_values = self.image_transform(img)
+        
+                # the frame interval is already tackled in RLDS dataloader
+                target_frame_index = -1
+                img_k = Image.fromarray(rlds_batch["observation"]["image_primary"][target_frame_index])#.copy()
+                # print(sum(np.array(img_k) - np.array(img)))
+                target_pixel_values= self.image_transform(img_k)
+
+                view_name = k.split("_")[-1]
+                out[view_name] = dict(initial_pixel_values=initial_pixel_values, target_pixel_values=target_pixel_values, 
+                    task_instruction=lang, action=action, dataset_name=dataset_name, coeff = coeff)
+        return out 
+
 
 
 class RLDSDataset(IterableDataset):
@@ -331,7 +379,7 @@ class RLDSDataset(IterableDataset):
         per_dataset_kwargs, weights = get_oxe_dataset_kwargs_and_weights(
             self.data_root_dir,
             mixture_spec,
-            load_camera_views=("primary",),
+            load_camera_views=("primary","wrist"),
             load_depth=False,
             load_proprio=False,
             load_language=True,

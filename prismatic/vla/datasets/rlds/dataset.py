@@ -59,7 +59,7 @@ def make_dataset_from_rlds(
     shuffle: bool = True,
     image_obs_keys: Dict[str, Optional[str]] = {},
     depth_obs_keys: Dict[str, Optional[str]] = {},
-    state_obs_keys: List[Optional[str]] = (),
+    state_obs_keys: List[Optional[str]] = [],
     language_key: Optional[str] = None,
     action_proprio_normalization_type: NormalizationType = NormalizationType.NORMAL,
     dataset_statistics: Optional[Union[dict, str]] = None,
@@ -194,11 +194,15 @@ def make_dataset_from_rlds(
                 )
             task["language_instruction"] = traj.pop(language_key)
 
+        print(f"make_dataset_from_rlds: {traj.keys()}")
+        sim = traj.get("similarity", 1.0)
+
         traj = {
             "observation": new_obs,
             "task": task,
             "action": tf.cast(traj["action"], tf.float32),
             "dataset_name": tf.repeat(name, traj_len),
+            "coeff": tf.cast(sim, tf.float32)
         }
 
         if absolute_action_mask is not None:
@@ -252,7 +256,7 @@ def make_dataset_from_rlds(
         split = "train" if train else "val"
 
     # special case with process ego4d dataset
-    if 'ego4d' in name:
+    if 'ego4d' in name or 'egoexo4d' in name:
         split = "val"
 
     dataset = dl.DLataset.from_rlds(builder, split=split, shuffle=shuffle, num_parallel_reads=num_parallel_reads)
@@ -357,7 +361,7 @@ def apply_trajectory_transforms(
 
 
     # adjust frame interval based on their frame rate
-    if 'ego4d' in name:
+    if 'ego4d' in name or 'egoexo4d' in name:
         window_size = 2
 
     if name in datasets_with_lower_frequency:
@@ -626,5 +630,5 @@ def make_interleaved_dataset(
 
     # Save for Later
     dataset.sample_weights = sample_weights
-
     return dataset, dataset_len, all_dataset_statistics
+

@@ -15,7 +15,7 @@ from accelerate import PartialState
 
 OptimizerCallable = Callable[[Iterable], Optimizer]
 
-from genie.modules import UncontrolledDINOLatentActionModel, ControllableDINOLatentActionModel
+from genie.modules import DINOLatentActionModel
 import logging
 logging.basicConfig(format='%(message)s', level=logging.INFO)
 
@@ -42,15 +42,12 @@ class DINO_LAM(LightningModule):
             log_interval: int = 1000,
             log_path: str = "log_imgs",
             task_name: str = 'lam_openx',
-            stage: str = 'stage-1',
             optimizer: OptimizerCallable = AdamW,
             make_data_pair: bool = False,
-            stage_one_ckpt: str = None,
     ) -> None:
         super(DINO_LAM, self).__init__()
-        assert stage in ['stage-1', 'stage-2']
 
-        lam = UncontrolledDINOLatentActionModel if stage == 'stage-1' else ControllableDINOLatentActionModel
+        lam = DINOLatentActionModel
 
         self.lam = lam(
                     in_dim=image_channels,
@@ -64,15 +61,6 @@ class DINO_LAM(LightningModule):
                     dropout=lam_dropout,
                 )
         
-        if stage_one_ckpt and path.exists(stage_one_ckpt):
-            lam_ckpt = torch.load(stage_one_ckpt)['state_dict']
-            stage1_ckpt = {}
-            for key in lam_ckpt.keys():
-                if 'vq' in key or 'action_latent' in key:
-                    stage1_ckpt[key.replace("lam.", "")] = lam_ckpt[key]
-            self.lam.load_state_dict(stage1_ckpt, strict=False)
-
-
         self.lam_num_latents = lam_num_latents
         self.vq_beta = vq_beta
         self.log_interval = log_interval
@@ -90,50 +78,92 @@ class DINO_LAM(LightningModule):
     def shared_step(self, batch: Dict) -> Tuple:
         # batch: keys['videos', 'task_instruction', 'action', 'dataset_names']
 
+        def _loss(gt, pred, coeff):
+            if coeff.ndim==1:
+                coeff = coeff.view(-1, 1, 1, 1, 1)
+            mse_loss = ((gt - pred['recon'])**2)*coeff
+            q_loss = ((pred['emb'].detach() - pred['z'])**2)*coeff
+            commit_loss = ((pred['emb'] - pred['z'].detach())**2)*coeff
+            loss = mse_loss.mean() + q_loss.mean() + self.vq_beta*commit_loss.mean()
+
+            unique, counts = torch.unique(outputs["indices"], return_counts=True)
+            index_counts = torch.zeros(self.lam_num_latents, dtype=torch.long).cuda()
+            index_counts[unique] = counts
+            code_usage = (index_counts != 0).float().mean()
+
+            # loss_logs = (
+            #     ("mse_loss", mse_loss),
+            #     ("q_loss", q_loss),
+            #     ("commit_loss", commit_loss),
+            #     ("code_usage", code_usage),
+            # )
+            loss_logs = {
+                "mse_loss":mse_loss,
+                "q_loss":q_loss,
+                "commit_loss":commit_loss,
+                "code_usage":code_usage
+            }
+            return loss, loss_logs
+
         outputs = self.lam(batch)
-        gt_future_frames = outputs["target"]
+        coeff = batch['coeff'].to(self.device, dtype = self.dtype)
+
+        loss = 0.0
+        loss_logs = []
+        for obs_view in outputs.keys():
+            for act_view in outputs[obs_view].keys():
+                gt_future_frames = outputs[obs_view][act_view]["target"]
+                pred = outputs[obs_view][act_view]["recon"]
+                loss_per_view, loss_logs_per_view = _loss(gt_future_frames, pred, coeff)
+                loss = loss + loss_per_view
+                for k, v in loss_logs_per_view.items():
+                    loss_logs.append((f"{obs_view} - {act_view}/{k}", v))
+        
+        # gt_future_frames = outputs["target"]
 
         # Compute loss
-        mse_loss = ((gt_future_frames - outputs["recon"]) ** 2).mean()
-        q_loss = ((outputs["emb"].detach() - outputs["z"]) ** 2).mean()
-        commit_loss = ((outputs["emb"] - outputs["z"].detach()) ** 2).mean()
+        # mse_loss = ((gt_future_frames - outputs["recon"]) ** 2).mean()
+        # q_loss = ((outputs["emb"].detach() - outputs["z"]) ** 2).mean()
+        # commit_loss = ((outputs["emb"] - outputs["z"].detach()) ** 2).mean()
 
-        loss = mse_loss + q_loss + self.vq_beta * commit_loss
+        # loss = mse_loss + q_loss + self.vq_beta * commit_loss
+
+
         
         # Optimize uncontrollable queries in stage-2 (the codebook is frozen though)
-        if "z_q_uncontrol" in outputs.keys():
-            q_loss_uncontrol = ((outputs["emb_uncontrol"].detach() - outputs["z_uncontrol"]) ** 2).mean()
-            commit_loss_uncontrol = ((outputs["emb_uncontrol"]- outputs["z_uncontrol"].detach()) ** 2).mean()
-            loss = loss + q_loss_uncontrol + self.vq_beta * commit_loss_uncontrol
+        # if "z_q_uncontrol" in outputs.keys():
+        #     q_loss_uncontrol = ((outputs["emb_uncontrol"].detach() - outputs["z_uncontrol"]) ** 2).mean()
+        #     commit_loss_uncontrol = ((outputs["emb_uncontrol"]- outputs["z_uncontrol"].detach()) ** 2).mean()
+        #     loss = loss + q_loss_uncontrol + self.vq_beta * commit_loss_uncontrol
 
         # Compute code usage
-        unique, counts = torch.unique(outputs["indices"], return_counts=True)
-        index_counts = torch.zeros(self.lam_num_latents, dtype=torch.long).cuda()
-        index_counts[unique] = counts
-        code_usage = (index_counts != 0).float().mean()
+        # unique, counts = torch.unique(outputs["indices"], return_counts=True)
+        # index_counts = torch.zeros(self.lam_num_latents, dtype=torch.long).cuda()
+        # index_counts[unique] = counts
+        # code_usage = (index_counts != 0).float().mean()
 
-        loss_logs = (
-            ("mse_loss", mse_loss),
-            ("q_loss", q_loss),
-            ("commit_loss", commit_loss),
-            ("code_usage", code_usage),
-        )
+        # loss_logs = (
+        #     ("mse_loss", mse_loss),
+        #     ("q_loss", q_loss),
+        #     ("commit_loss", commit_loss),
+        #     ("code_usage", code_usage),
+        # )
 
-        if "indices_uncontrol" in outputs.keys():
-            unique, counts = torch.unique(outputs["indices_uncontrol"], return_counts=True)
-            index_counts = torch.zeros(32, dtype=torch.long).cuda()
-            index_counts[unique] = counts
-            uncontrol_code_usage = (index_counts != 0).float().mean()
+        # if "indices_uncontrol" in outputs.keys():
+        #     unique, counts = torch.unique(outputs["indices_uncontrol"], return_counts=True)
+        #     index_counts = torch.zeros(32, dtype=torch.long).cuda()
+        #     index_counts[unique] = counts
+        #     uncontrol_code_usage = (index_counts != 0).float().mean()
 
-            loss_logs = (
-                ("mse_loss", mse_loss),
-                ("q_loss", q_loss),
-                ("commit_loss", commit_loss),
-                ("q_loss_uncontrol", q_loss_uncontrol),
-                ("commit_loss_uncontrol", commit_loss_uncontrol),
-                ("code_usage", code_usage),
-                ("code_usage_uncontrol", uncontrol_code_usage),
-            )
+        #     loss_logs = (
+        #         ("mse_loss", mse_loss),
+        #         ("q_loss", q_loss),
+        #         ("commit_loss", commit_loss),
+        #         ("q_loss_uncontrol", q_loss_uncontrol),
+        #         ("commit_loss_uncontrol", commit_loss_uncontrol),
+        #         ("code_usage", code_usage),
+        #         ("code_usage_uncontrol", uncontrol_code_usage),
+        #     )
 
         return outputs, loss, loss_logs
 
@@ -156,6 +186,25 @@ class DINO_LAM(LightningModule):
 
         if self.distributed_state.is_main_process:
             wandb.log({**{"train_loss": loss}, **{f"train/{k}": v for k, v in aux_losses}})
+
+        return loss
+    
+    def validation_step(self, batch: Dict, batch_idx: int) -> Tensor:
+        # Compute the training loss
+        outputs, loss, aux_losses = self.shared_step(batch)
+
+        # Log the training loss
+        self.log_dict(
+            {**{"valid_loss": loss}, **{f"valid/{k}": v for k, v in aux_losses}},
+            prog_bar=True,
+            logger=True,
+            on_step=True,
+            on_epoch=True,
+            sync_dist=True
+        )
+
+        if self.distributed_state.is_main_process:
+            wandb.log({**{"valid_loss": loss}, **{f"valid/{k}": v for k, v in aux_losses}})
 
         return loss
 

@@ -15,8 +15,9 @@ import torchvision.transforms as transforms
 from dataclasses import dataclass
 
 from prismatic.util import set_global_seed
-from prismatic.util.data_utils import CollatorForLatentAction, CollatorForMultiViewVideo
-from prismatic.vla.datasets import RLDSDataset, EpisodicRLDSDataset, RLDSBatchTransformVideo
+# from prismatic.util.data_utils import CollatorForLatentAction, CollatorForMultiViewVideo
+from prismatic.util.data_utils import CollatorForViewpointInvariantLatentAction
+from prismatic.vla.datasets import RLDSDataset, EpisodicRLDSDataset, RLDSBatchTransformMultiViewVideo
                                     
 
 
@@ -197,10 +198,11 @@ class LightningOpenX(LightningDataset):
         self.num_workers = 0    # Important =>> Set to 0 if using RLDS; TFDS rolls its own parallelism!
         self.worker_init_fn = set_global_seed(42, get_worker_init_fn=True)
 
-        self.batch_transform = RLDSBatchTransformVideo(
+        self.batch_transform = RLDSBatchTransformMultiViewVideo(
             image_transform=transforms.ToTensor() 
         )
-        self.collate_fn = CollatorForLatentAction()
+        # self.collate_fn = CollatorForLatentAction()
+        self.collate_fn = CollatorForViewpointInvariantLatentAction()
 
         self.save_hyperparameters()
 

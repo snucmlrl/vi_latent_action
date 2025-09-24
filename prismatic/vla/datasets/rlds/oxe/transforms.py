@@ -27,6 +27,14 @@ from prismatic.vla.datasets.rlds.utils.data_utils import (
     relabel_bridge_actions,
 )
 
+def pseudo_dataset_transform(trajectory: Dict[str, Any]) -> Dict[str, Any]:
+    trajectory["language_instruction"] = trajectory["traj_metadata"]["ego_caption"]
+    trajectory["similarity"] = trajectory["traj_metadata"]["similarity"]
+
+    trajectory["observation"]["EEF_state"] = trajectory["action"][:, :6]
+    trajectory["observation"]["gripper_state"] = trajectory["action"][:, -1:]
+    return trajectory
+
 
 def bridge_oxe_dataset_transform(trajectory: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -860,8 +868,8 @@ def human_dataset_transform(sample: Dict[str, Any]) -> Dict[str, Any]:
     """
     # Extract the observation from the sample
     observation = sample["observation"]
-    print('ego4d', sample.keys())
-    print('ego4d obs', sample["observation"].keys())
+    print('egoexo4d', sample.keys())
+    print('egoexo4d obs', sample["observation"].keys())
     # print('sample["observation"]', sample["observation"]['image'].shape[0])
     # observation["state"] = tf.zeros((2, 7), dtype=tf.float32)
     
@@ -965,8 +973,9 @@ OXE_STANDARDIZATION_TRANSFORMS = {
     "libero_10_no_noops_quad": libero_dataset_transform,
     "libero_combined": libero_dataset_transform,
     ### Human Dataset
-    "ego4d_split_1": human_dataset_transform,
-    "ego4d_split_2": human_dataset_transform,
-    "ego4d_split_3": human_dataset_transform,
-    "ego4d_split_4": human_dataset_transform,
+    "egoexo4d_split_1": human_dataset_transform,
+    "egoexo4d_split_2": human_dataset_transform,
+    "egoexo4d_split_3": human_dataset_transform,
+    "egoexo4d_split_4": human_dataset_transform,
+    "pseudo_pair_dataset": pseudo_dataset_transform
 }

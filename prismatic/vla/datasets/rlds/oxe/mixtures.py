@@ -120,6 +120,51 @@ OXE_NAMED_MIXTURES: Dict[str, List[Tuple[str, float]]] = {
         ("ego4d_split_4", 1.0),
     ],
 
+    "omni_magic_soup_v2": [
+        # ("droid", 1.0),
+        ("egoexo4d_split_1", 1.0),
+        ("egoexo4d_split_2", 1.0),
+        ("egoexo4d_split_3", 1.0),
+        ("egoexo4d_split_4", 1.0),
+        ("pseudo_pair_dataset", 1.0)
+    ],
+
+    "omni_magic_soup_v2_plus": [
+        ("fractal20220817_data", 0.5),                
+        ("kuka", 0.1),
+        ("bridge_oxe", 1.0),                                   
+        ("taco_play", 2.0),
+        ("jaco_play", 1.0),
+        ("berkeley_cable_routing", 1.0),
+        ("roboturk", 2.0),
+        ("viola", 2.0),
+        ("berkeley_autolab_ur5", 2.0),
+        ("toto", 1.0),
+        ("language_table", 0.1),
+        ("stanford_hydra_dataset_converted_externally_to_rlds", 2.0),
+        ("austin_buds_dataset_converted_externally_to_rlds", 1.0),
+        ("nyu_franka_play_dataset_converted_externally_to_rlds", 3.0),
+        ("furniture_bench_dataset_converted_externally_to_rlds", 0.1),
+        ("ucsd_kitchen_dataset_converted_externally_to_rlds", 2.0),
+        ("austin_sailor_dataset_converted_externally_to_rlds", 1.0),
+        ("austin_sirius_dataset_converted_externally_to_rlds", 1.0),
+        ("dlr_edan_shared_control_converted_externally_to_rlds", 1.0),
+        ("iamlab_cmu_pickup_insert_converted_externally_to_rlds", 1.0),
+        ("utaustin_mutex", 1.0),
+        ("berkeley_fanuc_manipulation", 2.0),
+        ("cmu_stretch", 1.0),
+        ("bc_z", 0.2),                                          
+        ("fmb", 1.0),
+        ("dobbe", 0.2), 
+        # Human
+        ("egoexo4d_split_1", 1.0),
+        ("egoexo4d_split_2", 1.0),
+        ("egoexo4d_split_3", 1.0),
+        ("egoexo4d_split_4", 1.0),
+        #Pseudo pair
+        ("pseudo_pair_dataset", 1.0)
+    ],
+
     # === T-DROID Dataset ===
     "tdroid_carrot_in_bowl": [
         ("tdroid_carrot_in_bowl", 1.0),

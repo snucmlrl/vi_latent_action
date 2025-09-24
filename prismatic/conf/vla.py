@@ -125,8 +125,6 @@ class Exp_DinoSigLIP_224px_OXE_Magic_Soup_Plus(Exp_SigLIP_224px_Bridge):
     per_device_batch_size: int = 32
 
 
-
-
 # === Define a VLA Registry Enum for Reference & Validation ===
 @unique
 class VLARegistry(Enum):
