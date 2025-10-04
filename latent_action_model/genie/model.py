@@ -86,7 +86,7 @@ class DINO_LAM(LightningModule):
             commit_loss = ((pred['emb'] - pred['z'].detach())**2)*coeff
             loss = mse_loss.mean() + q_loss.mean() + self.vq_beta*commit_loss.mean()
 
-            unique, counts = torch.unique(outputs["indices"], return_counts=True)
+            unique, counts = torch.unique(pred["indices"], return_counts=True)
             index_counts = torch.zeros(self.lam_num_latents, dtype=torch.long).cuda()
             index_counts[unique] = counts
             code_usage = (index_counts != 0).float().mean()
@@ -98,26 +98,41 @@ class DINO_LAM(LightningModule):
             #     ("code_usage", code_usage),
             # )
             loss_logs = {
-                "mse_loss":mse_loss,
-                "q_loss":q_loss,
-                "commit_loss":commit_loss,
+                "mse_loss":mse_loss.mean(),
+                "q_loss":q_loss.mean(),
+                "commit_loss":commit_loss.mean(),
                 "code_usage":code_usage
             }
             return loss, loss_logs
-
+        
+        coeff = batch.pop('coeff').to(self.device, dtype = self.dtype)
         outputs = self.lam(batch)
-        coeff = batch['coeff'].to(self.device, dtype = self.dtype)
 
         loss = 0.0
         loss_logs = []
         for obs_view in outputs.keys():
             for act_view in outputs[obs_view].keys():
                 gt_future_frames = outputs[obs_view][act_view]["target"]
-                pred = outputs[obs_view][act_view]["recon"]
+                pred = outputs[obs_view][act_view]
                 loss_per_view, loss_logs_per_view = _loss(gt_future_frames, pred, coeff)
-                loss = loss + loss_per_view
+                loss = loss + loss_per_view*0.5
                 for k, v in loss_logs_per_view.items():
-                    loss_logs.append((f"{obs_view} - {act_view}/{k}", v))
+                    loss_logs.append((f"{obs_view}-{act_view}/{k}", v))
+        
+        ref_obs_view = next(iter(outputs))
+        act_views = list(outputs[ref_obs_view].keys())
+        idx_map = dict()
+        for act_view in act_views:
+            idx = outputs[ref_obs_view][act_view]['indicies']
+            idx_map[act_view] = idx.detach().cpu().view(-1).long()
+        
+        for act_view1 in act_views:
+            for act_view2 in act_views:
+                if act_view1 != act_view2:
+                    idx1, idx2 = idx_map[act_view1], idx_map[act_view2]
+                    loss_logs.append(
+                        (f'consistency_{act_view1}-{act_view2}', float(torch.equal(idx1, idx2)))
+                    )
         
         # gt_future_frames = outputs["target"]
 
@@ -164,7 +179,6 @@ class DINO_LAM(LightningModule):
         #         ("code_usage", code_usage),
         #         ("code_usage_uncontrol", uncontrol_code_usage),
         #     )
-
         return outputs, loss, loss_logs
 
 
@@ -172,7 +186,6 @@ class DINO_LAM(LightningModule):
     def training_step(self, batch: Dict, batch_idx: int) -> Tensor:
         # Compute the training loss
         outputs, loss, aux_losses = self.shared_step(batch)
-
 
         # Log the training loss
         self.log_dict(
