@@ -38,7 +38,7 @@ cd preprocess_dataset/egoexo4d_build
 
 Preparing info_clips.json
 ```{bash}
-python prepare_dataset.py --root_path /home/robot/vi_latent_action/data/egoexo4d --only_essential
+python prepare_dataset.py --root /home/robot/vi_latent_action/data/egoexo4d 
 ```
 
 Converting to .npy
@@ -75,3 +75,4 @@ PY
 bash train.sh
 ```
 
+pip install flash-attn==2.5.6
