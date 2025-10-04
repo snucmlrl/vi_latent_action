@@ -27,6 +27,7 @@ from torch.distributed.fsdp import (
 )
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.optim import AdamW
+from bitsandbytes.optim import Adam8bit
 from transformers.optimization import get_constant_schedule, get_cosine_schedule_with_warmup
 
 from prismatic.models.vlms import PrismaticVLM
@@ -214,7 +215,8 @@ class FSDPStrategy(TrainingStrategy):
             groups = [{"params": decay, "weight_decay": self.weight_decay}, {"params": no_decay, "weight_decay": 0.0}]
 
             # Create Optimizer & LR Scheduler
-            self.optimizer = AdamW(groups, lr=self.learning_rate)
+            # self.optimizer = AdamW(groups, lr=self.learning_rate)
+            self.optimizer = Adam8bit(groups, lr = self.learning_rate, betas=(0.9, 0.999), eps = 1e-8)
             self.lr_scheduler = get_cosine_schedule_with_warmup(self.optimizer, num_warmup_steps, num_training_steps)
             for param_group in self.optimizer.param_groups:
                 param_group["lr"] = 0.0
@@ -239,7 +241,8 @@ class FSDPStrategy(TrainingStrategy):
             groups = [{"params": decay, "weight_decay": self.weight_decay}, {"params": no_decay, "weight_decay": 0.0}]
 
             # Create Optimizer & LR Scheduler
-            self.optimizer = AdamW(groups, lr=self.learning_rate)
+            # self.optimizer = AdamW(groups, lr=self.learning_rate)
+            self.optimizer = Adam8bit(groups, lr = self.learning_rate, betas=(0.9, 0.999), eps = 1e-8)
             self.lr_scheduler = get_constant_schedule(self.optimizer)
 
         else:
