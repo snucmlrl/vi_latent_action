@@ -347,7 +347,8 @@ class RLDSBatchTransformMultiViewVideo:
 
                 view_name = k.split("_")[-1]
                 out[view_name] = dict(initial_pixel_values=initial_pixel_values, target_pixel_values=target_pixel_values, 
-                    task_instruction=lang, action=action, dataset_name=dataset_name, coeff = coeff)
+                    task_instruction=lang, action=action, dataset_name=dataset_name)
+        out["coeff"] = coeff
         return out 
 
 
@@ -379,7 +380,7 @@ class RLDSDataset(IterableDataset):
         per_dataset_kwargs, weights = get_oxe_dataset_kwargs_and_weights(
             self.data_root_dir,
             mixture_spec,
-            load_camera_views=("primary","wrist"),
+            load_camera_views=("primary", "wrist"),
             load_depth=False,
             load_proprio=False,
             load_language=True,

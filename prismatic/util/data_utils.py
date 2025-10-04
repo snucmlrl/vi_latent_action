@@ -390,7 +390,15 @@ class CollatorForViewpointInvariantLatentAction:
             dataset_names = None
 
         views = list(instances[0].keys())
+        views = [k for k in views
+                 if isinstance(instances[0][k], dict)
+                 and ("initial_pixel_values" in instances[0][k])]
+
         output = dict()
+
+        coeff = [torch.as_tensor(instance["coeff"]) for instance in instances]
+        coeff = torch.stack(coeff)
+        output['coeff'] = coeff
 
         for view in views:
             initial_pixel_values = [instance[view]["initial_pixel_values"] for instance in instances]
@@ -399,9 +407,6 @@ class CollatorForViewpointInvariantLatentAction:
             target_pixel_values = [instance[view]["target_pixel_values"] for instance in instances]
             target_pixel_values = torch.stack(target_pixel_values)
             pixel_values = torch.stack([initial_pixel_values, target_pixel_values], dim=1)
-
-            coeff = [torch.as_tensor(instance[view]["coeff"]) for instance in instances]
-            coeff = torch.stack(coeff)
 
             action = [torch.from_numpy(instance[view]["action"]) for instance in instances]
             action = torch.stack(action)
@@ -413,7 +418,6 @@ class CollatorForViewpointInvariantLatentAction:
                 videos=pixel_values,
                 task_instruction=task_instruction,
                 action=action,
-                coeff = coeff
             )
             if dataset_names is not None:
                 output_per_view["dataset_names"] = dataset_names

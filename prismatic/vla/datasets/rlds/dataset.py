@@ -194,14 +194,21 @@ def make_dataset_from_rlds(
                 )
             task["language_instruction"] = traj.pop(language_key)
 
-        print(f"make_dataset_from_rlds: {traj.keys()}")
-        sim = traj.get("similarity", 1.0)
+        # print(f"make_dataset_from_rlds: {traj.keys()}")
+        sim = traj.get("similarity", None)
+        if sim is None:
+            sim = tf.ones((traj_len,), tf.float32)
+        else:
+            sim = tf.convert_to_tensor(sim, dtype=tf.float32)
+
+        act = tf.cast(traj["action"], tf.float32)
+        ds_name = tf.repeat(name, traj_len)
 
         traj = {
             "observation": new_obs,
             "task": task,
-            "action": tf.cast(traj["action"], tf.float32),
-            "dataset_name": tf.repeat(name, traj_len),
+            "action": act,
+            "dataset_name": ds_name,
             "coeff": tf.cast(sim, tf.float32)
         }
 
@@ -386,7 +393,7 @@ def apply_trajectory_transforms(
     )
 
     if train and subsample_length is not None:
-        dataset = dataset.traj_mp(
+        dataset = dataset.traj_map(
             partial(traj_transforms.subsample, subsample_length=subsample_length),
             num_parallel_calls,
         )
