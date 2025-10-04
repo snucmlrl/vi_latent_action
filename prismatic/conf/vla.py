@@ -72,15 +72,15 @@ class Exp_SigLIP_224px_Bridge(VLAConfig):
 
     # Data Mixture Parameters
     data_mix: str = "oxe_magic_soup_plus"
-    shuffle_buffer_size: int = 20_000   
+    shuffle_buffer_size: int = 20_000
 
     # Optimization Parameters
     epochs: int = 10
     max_steps: Optional[int] = None
 
-    expected_world_size: int = 8
-    global_batch_size: int = 256
-    per_device_batch_size: int = 32
+    expected_world_size: int = 4
+    global_batch_size: int = 16
+    per_device_batch_size: int = 4
 
     learning_rate: float = 2e-5
     weight_decay: float = 0.0
@@ -95,6 +95,15 @@ class Exp_SigLIP_224px_Bridge(VLAConfig):
 
 
 # = [8 GPU] Fast Iteration =>> DINO-SigLIP 224px + Bridge =
+
+@dataclass
+class Exp_DinoSigLIP_224px_Droid(Exp_SigLIP_224px_Bridge):
+    vla_id: str = "prism-dinosiglip-224px+mx-droid"
+    base_vlm: Union[str, Path] = "prism-dinosiglip-224px+7b"
+
+    data_mix: str = "droid"
+
+
 @dataclass
 class Exp_DinoSigLIP_224px_Bridge(Exp_SigLIP_224px_Bridge):
     vla_id: str = "prism-dinosiglip-224px+mx-bridge"
@@ -130,6 +139,8 @@ class Exp_DinoSigLIP_224px_OXE_Magic_Soup_Plus(Exp_SigLIP_224px_Bridge):
 class VLARegistry(Enum):
     # Sanity Check Configurations =>> BridgeV2
     SIGLIP_224PX_MX_BRIDGE = Exp_SigLIP_224px_Bridge
+
+    DINOSIGLIP_224PX_MX_DROID = Exp_DinoSigLIP_224px_Droid
 
     # Pre-training on Bridge-v2 data only
     DINOSIGLIP_224PX_MX_BRIDGE = Exp_DinoSigLIP_224px_Bridge
