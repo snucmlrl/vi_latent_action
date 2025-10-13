@@ -156,3 +156,8 @@ data/
 pyrightconfig.json
 
 lavila/*
+rollouts/*
+
+*.out
+*.log
+*.pt
