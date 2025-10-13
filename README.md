@@ -75,4 +75,57 @@ PY
 bash train.sh
 ```
 
+# Latent Action Pretraining
+``` {bash}
+cd vla_scripts
+```
+
+``` {bash}
+python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='timm/vit_large_patch14_reg4_dinov2.lvd142m', repo_type='model', local_dir='../data/ckpt/vit_large_patch14_reg4_dinov2.lvd142m', local_dir_use_symlinks=False, allow_patterns=['model.safetensors','pytorch_model.bin'])"
+```
+
+``` {bash}
+python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='timm/ViT-SO400M-14-SigLIP', repo_type='model', local_dir='../data/ckpt/ViT-SO400M-14-SigLIP', local_dir_use_symlinks=False, allow_patterns=['open_clip_model.safetensors','open_clip_pytorch_model.bin','model.safetensors','pytorch_model.bin'])"
+```
+
+``` {bash}
+bash train.sh
+```
+
+
+``` {bash}
+python extern/convert_univla_weights_to_hf.py
+```
+
+``` {bash}
 pip install flash-attn==2.5.6
+```
+
+# LIBERO finetuning
+``` {bash}
+export CUDA_VISIBLE_DEVICES=0,1,2,3
+bash finetune_libero.sh
+``` 
+
+# LIBERO eval setting
+``` {bash}
+conda create -n libero python=3.10 -y
+conda activate libero
+python -m pip install   --extra-index-url https://download.pytorch.org/whl/cu121   torch==2.2.0+cu121 torchvision==0.17.0+cu121
+pip install tensorflow==2.15.0
+pip install draccus
+pip install transformers==4.40.1
+pip install opencv_python==4.10.0.84
+pip install numpy==1.26.4
+pip install hydra-core==1.3.2
+pip install imageio[ffmpeg]
+pip install robosuite==1.4.1
+pip install rich==14.0.0
+pip install timm==0.9.10
+pip install tensorflow_graphics==2021.12.3
+pip install braceexpand==0.1.7
+pip install webdataset==0.2.111
+pip install accelerate==0.32.1
+
+ln -s /home/robot/vi_latent_action/LIBERO/libero       /home/robot/vi_latent_action/experiments/robot/libero/libero
+```
