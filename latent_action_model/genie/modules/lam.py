@@ -172,3 +172,7 @@ class DINOLatentActionModel(nn.Module):
     @property
     def device(self):
         return next(self.parameters()).device
+    
+    @property
+    def dtype(self):
+        return next(self.parameters()).dtype
