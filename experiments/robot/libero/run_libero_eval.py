@@ -16,7 +16,7 @@ from collections import deque
 import wandb
 
 # Append current directory so that interpreter can find experiments.robot
-sys.path.append("../..")
+sys.path.append("/home/robot/vi_latent_action")
 from experiments.robot.libero.libero_utils import (
     get_libero_dummy_action,
     get_libero_env,
@@ -67,8 +67,8 @@ class GenerateConfig:
     run_id_note: Optional[str] = None                # Extra note to add in run ID for logging
     local_log_dir: str = "./experiments/eval_logs"   # Local directory for eval logs
     use_wandb: bool = False                          # Whether to also log results in Weights & Biases
-    wandb_project: str = "YOUR_WANDB_PROJECT"        # Name of W&B project to log to (use default!)
-    wandb_entity: str = "YOUR_WANDB_ENTITY"          # Name of entity to log under
+    wandb_project: str = "libero_eval"        # Name of W&B project to log to (use default!)
+    wandb_entity: str = "snu_jm"          # Name of entity to log under
 
     seed: int = 7                                    # Random Seed (for reproducibility)
 
